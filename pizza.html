@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pizza Calculator</title>
+    <script src="pizza.js"></script>
+    <style>
+        .rectangular, .circular {
+            border: 1px solid #1C6EA4;
+            border-radius: 5px;
+            margin-top: 5px;
+            padding: 3px;
+        }
+        .result {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <template id="tmpl_rectangular">
+        <div class="rectangular">
+            <button class="delete">X</button>
+            Rectangular
+            <input class="price" placeholder="price" type="number" min="0.00" max="10000.00" step="0.01" />
+            <input class="width" placeholder="width" type="number" min="0.00" max="100.00" step="0.1" />
+            <input class="height" placeholder="height" type="number" min="0.00" max="100.00" step="0.1" />
+            price per cm2: <span class="result">NaN</span>
+        </div>
+    </template>
+    <template id="tmpl_circular">
+        <div class="circular">
+            <button class="delete">X</button>
+            Circular
+            <input class="price" placeholder="price" type="number" min="0.00" max="10000.00" step="0.01" />
+            <input class="diameter" placeholder="diameter" type="number" min="0.00" max="100.00" step="0.1" />
+            price per cm2: <span class="result">NaN</span>
+        </div>
+    </template>
+    <button id="clear">Clear</button>
+    <button id="rectangular">Add Rectangular</button>
+    <button id="circular">Add Circular</button>
+    <div id="pizzas"></div>
+</body>
+</html>
