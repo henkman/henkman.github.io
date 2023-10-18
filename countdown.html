@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Countdown</title>
+    <style>
+        .blue-box {
+            display: inline-block;
+            background-color: #1C6EA4;
+            border-radius: 5px;
+            margin-top: 5px;
+            padding: 10px;
+        }
+
+        .yellow-box {
+            display: inline-block;
+            background-color: #b3ce3c;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: xx-large;
+        }
+
+        .label {
+            font-size: x-large;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="blue-box">
+        <div class="yellow-box"><span id="days">0</span> Days</div>
+        <div class="yellow-box"><span id="hours">0</span> Hours</div>
+        <div class="yellow-box"><span id="minutes">0</span> Minutes</div>
+        <div class="yellow-box"><span id="seconds">0</span> Seconds</div>
+    </div>
+    <br>
+    <div class="blue-box">
+        <label class="label">Until:
+            <input id="until" type="datetime-local" step="1"></input>
+        </label>
+        <button>Start New Countdown</button>
+    </div>
+    <script src="countdown.js"></script>
+</body>
+
+</html>
