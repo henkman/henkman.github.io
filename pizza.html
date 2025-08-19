@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Pizza Calculator</title>
-    <script src="pizza.js"></script>
     <style>
-        .rectangular, .circular {
+        .rectangular,
+        .circular {
             border: 1px solid #1C6EA4;
             border-radius: 5px;
             margin-top: 5px;
             padding: 3px;
         }
+
         .result {
             font-weight: bold;
         }
     </style>
 </head>
+
 <body>
     <template id="tmpl_rectangular">
         <div class="rectangular">
@@ -39,5 +42,7 @@
     <button id="rectangular">Add Rectangular</button>
     <button id="circular">Add Circular</button>
     <div id="pizzas"></div>
+    <script src="pizza.js"></script>
 </body>
+
 </html>
