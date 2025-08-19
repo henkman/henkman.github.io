@@ -15,7 +15,12 @@
         .result {
             font-weight: bold;
         }
+
+        button, input, div  {
+           font-size: 1.5rem;
+        }
     </style>
+    <meta name="viewport" content="width=600, initial-scale=0.6">
 </head>
 
 <body>
@@ -26,7 +31,7 @@
             <input class="price" placeholder="price" type="number" min="0.00" max="10000.00" step="0.01" />
             <input class="width" placeholder="width" type="number" min="0.00" max="100.00" step="0.1" />
             <input class="height" placeholder="height" type="number" min="0.00" max="100.00" step="0.1" />
-            price per cm2: <span class="result">NaN</span>
+            <br>price per cm2: <span class="result">NaN</span>
         </div>
     </template>
     <template id="tmpl_circular">
@@ -35,7 +40,7 @@
             Circular
             <input class="price" placeholder="price" type="number" min="0.00" max="10000.00" step="0.01" />
             <input class="diameter" placeholder="diameter" type="number" min="0.00" max="100.00" step="0.1" />
-            price per cm2: <span class="result">NaN</span>
+            <br>price per cm2: <span class="result">NaN</span>
         </div>
     </template>
     <button id="clear">Clear</button>

@@ -1,10 +1,11 @@
 const qrcode = new QRCode(document.getElementById("qrcode"), {
     text: "",
-    width: 256,
-    height: 256,
+    width: 512,
+    height: 512,
     colorDark: "#000000",
     colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.M
+    correctLevel: QRCode.CorrectLevel.M,
+    addQuietZone: true
 })
 
 const generateGiroCode = (transfer) => {
@@ -24,7 +25,13 @@ const generateGiroCode = (transfer) => {
     qrcode.makeCode(code)
 }
 
-document.getElementById("generateForm").addEventListener("submit",
+document.getElementById("iban").addEventListener("input", (e) => {
+    e.target.value = e.target.value.replace(/\s/g, "")
+})
+
+const $form = document.getElementById("generateForm");
+
+$form.addEventListener("submit",
     (e) => {
         e.preventDefault()
         const transfer = {

@@ -7,15 +7,18 @@
         input,
         select {
             margin-right: 100%;
-            margin-bottom: 5px;
-            width: 400px;
+            margin-bottom: 8px;
+            width: 95%;
+            font-size: 2em;
         }
 
         input[type="submit"] {
-            width: 150px;
-            margin-bottom: 5px;
+            width: 250px;
+            margin-top: 5px;
+            margin-bottom: 10px;
         }
     </style>
+    <meta name="viewport" content="width=540, initial-scale=0.7">
 </head>
 
 <body>
@@ -189,8 +192,8 @@
         <input type="submit" value="Generate">
     </form>
     <div id="qrcode"></div>
-    <!-- thanks davidshimjs/qrcodejs -->
-    <script src="qrcode.min.js"></script>
+    <!-- #225 patched and issue #287 addressed -->
+    <script src="qrcode.js"></script>
     <script src="girocode.js"></script>
 </body>
 
