@@ -1,3 +1,6 @@
+/* #225 patched aswell as issues #287 and #292 addressed */
+import { QRCode } from './qrcode.js';
+
 const qrcode = new QRCode(document.getElementById("qrcode"), {
     text: "",
     width: 512,
