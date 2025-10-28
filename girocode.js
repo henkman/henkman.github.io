@@ -32,9 +32,7 @@ document.getElementById("iban").addEventListener("input", (e) => {
     e.target.value = e.target.value.replace(/\s/g, "")
 })
 
-const $form = document.getElementById("generateForm");
-
-$form.addEventListener("submit",
+document.getElementById("generateForm").addEventListener("submit",
     (e) => {
         e.preventDefault()
         const transfer = {
