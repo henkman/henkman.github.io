@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8fc">
+  <title>WhenFreeze — local frost forecast</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #17283b;
+      background: #f5f8fc;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --ink: #17283b;
+      --muted: #64758a;
+      --line: #dce5ef;
+      --blue: #2874bd;
+      --red: #b94a3f;
+      --green: #29805a;
+      --card-shadow: 0 8px 26px rgb(34 58 86 / 7%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 12% -12%, rgb(200 224 249 / 58%), transparent 37rem),
+        #f5f8fc;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .page { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 38px 0 26px; }
+    .masthead { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border: 1px solid #d5e5f4;
+      border-radius: 15px;
+      background: linear-gradient(145deg, #fff, #e7f2fc);
+      color: #2874bd;
+      font-size: 25px;
+      box-shadow: var(--card-shadow);
+    }
+    h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.04em; }
+    .tagline { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgb(255 255 255 / 92%);
+      box-shadow: var(--card-shadow);
+    }
+
+    .location-panel { margin-bottom: 20px; }
+    .location-panel summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 12px 18px;
+      border-radius: 18px;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+    .location-panel summary::-webkit-details-marker { display: none; }
+    .location-panel[open] summary { border-bottom: 1px solid var(--line); border-radius: 18px 18px 0 0; }
+    .burger { position: relative; width: 18px; height: 2px; flex: 0 0 auto; border-radius: 2px; background: #53718e; }
+    .burger::before, .burger::after { position: absolute; left: 0; width: 18px; height: 2px; border-radius: 2px; background: #53718e; content: ""; }
+    .burger::before { top: -6px; }
+    .burger::after { top: 6px; }
+    .location-summary-label { font-weight: 700; }
+    .location-summary-current { overflow: hidden; color: var(--muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .location-summary-action { margin-left: auto; color: var(--blue); font-size: 12px; font-weight: 650; }
+    .toolbar { padding: 18px; }
+    .toolbar-top { display: flex; gap: 12px; align-items: end; }
+    .search-wrap { position: relative; flex: 1; min-width: 0; }
+    label { display: block; margin-bottom: 7px; color: #3c5269; font-size: 13px; font-weight: 650; }
+    .search-row { display: flex; gap: 9px; }
+    input[type="search"] {
+      width: 100%;
+      min-width: 0;
+      height: 44px;
+      padding: 0 13px;
+      border: 1px solid #cbd8e6;
+      border-radius: 10px;
+      outline: none;
+      background: #fff;
+      color: var(--ink);
+    }
+    input[type="search"]:focus { border-color: #6da6d8; box-shadow: 0 0 0 3px rgb(40 116 189 / 13%); }
+    .button {
+      min-height: 44px;
+      padding: 0 17px;
+      border: 1px solid #246aa9;
+      border-radius: 10px;
+      background: #2874bd;
+      color: white;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .button:hover { background: #2165a8; }
+    .button:disabled { cursor: wait; opacity: .65; }
+    .button.secondary { border-color: #d3deea; background: #fff; color: #304961; }
+    .button.secondary:hover { background: #f3f7fb; }
+    .button:focus-visible, .result:focus-visible { outline: 3px solid rgb(40 116 189 / 32%); outline-offset: 2px; }
+    .location-line { min-height: 20px; margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+
+    .results {
+      position: absolute;
+      z-index: 3;
+      top: calc(100% + 5px);
+      right: 0;
+      left: 0;
+      display: none;
+      max-height: 280px;
+      overflow: auto;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgb(25 47 74 / 15%);
+    }
+    .results.open { display: block; }
+    .result {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+    .result:hover { background: #f1f6fb; }
+    .result small { display: block; margin-top: 3px; color: var(--muted); }
+
+    .message { margin: 18px 2px 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .message.error { color: #9e332a; }
+    .message:empty { display: none; }
+    .forecast-heading { display: flex; justify-content: space-between; align-items: end; gap: 15px; margin: 24px 2px 14px; }
+    .forecast-heading h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
+    .heading-tools { display: flex; align-items: center; justify-content: end; gap: 8px; }
+    .heading-tools .button { min-height: 36px; padding: 0 12px; font-size: 12px; }
+    .updated { color: var(--muted); font-size: 12px; text-align: right; }
+    .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 255px), 1fr)); gap: 14px; }
+    .day-card { min-width: 0; overflow: hidden; padding: 17px 17px 14px; }
+    .day-card.today { grid-column: span 2; border-color: #b8d5ee; background: linear-gradient(145deg, #fff, #f3f9ff); box-shadow: 0 12px 34px rgb(34 91 145 / 12%); }
+    .day-card.today .day-name { font-size: 19px; }
+    .day-card.today .chart svg { max-height: 235px; }
+    .day-card.freezing { border-color: #efd1cb; background: linear-gradient(155deg, #fff, #fff7f4); }
+    .day-card.all-day { border-color: #e8bab4; background: linear-gradient(155deg, #fff7f6, #ffe9e6); }
+    .day-top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+    .day-name { font-size: 16px; font-weight: 750; }
+    .day-date { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .badge { flex: 0 0 auto; padding: 6px 9px; border-radius: 99px; background: #eef3f8; color: #53677d; font-size: 11px; font-weight: 700; }
+    .badge.freezing { background: #fae4df; color: #9e4036; }
+    .badge.safe { background: #e8f4ec; color: #28734e; }
+    .temperatures { display: flex; gap: 16px; margin: 18px 0 10px; color: #4a5e73; font-size: 13px; }
+    .temperatures strong { color: var(--ink); font-size: 15px; }
+    .chart { display: block; width: 100%; height: auto; overflow: visible; }
+    .chart-empty { display: grid; place-items: center; height: 130px; margin-top: 8px; border: 1px dashed #d6e0ea; border-radius: 10px; color: var(--muted); font-size: 13px; }
+    .chart-caption { display: flex; justify-content: space-between; margin-top: 2px; color: #8290a0; font-size: 10px; }
+    .credit { margin: 24px 2px 0; color: #748397; font-size: 12px; line-height: 1.55; }
+    .credit a { color: #426d99; }
+    .message { margin: 0 2px 12px; }
+    @media (max-width: 620px) {
+      .page { width: min(100% - 24px, 520px); padding-top: 24px; }
+      .toolbar { padding: 15px; }
+      .toolbar-top { align-items: stretch; flex-direction: column; }
+      .search-row { flex-direction: column; }
+      .search-row .button { width: 100%; }
+      .forecast-heading { align-items: start; flex-direction: column; margin-top: 19px; }
+      .heading-tools { width: 100%; justify-content: start; flex-wrap: wrap; }
+      .updated { width: 100%; text-align: left; }
+      .day-card.today { grid-column: auto; }
+      .location-panel summary { gap: 10px; padding: 12px 15px; }
+      .location-summary-current { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div class="mark" aria-hidden="true">❄</div>
+      <div>
+        <h1>WhenFreeze</h1>
+        <p class="tagline">A simple seven-day forecast for freezing temperatures. VibeCoded LUL</p>
+      </div>
+    </header>
+
+    <details id="location-panel" class="panel location-panel">
+      <summary>
+        <span class="burger" aria-hidden="true"></span>
+        <span id="location-summary-label" class="location-summary-label">Choose a location</span>
+        <span id="location-summary-current" class="location-summary-current"></span>
+        <span class="location-summary-action">Change</span>
+      </summary>
+      <div class="toolbar">
+        <div class="toolbar-top">
+          <div class="search-wrap">
+            <label for="location-search">Find a location</label>
+            <input id="location-search" type="search" autocomplete="off" placeholder="Search city or town">
+            <div id="search-results" class="results" role="listbox" aria-label="Location results"></div>
+          </div>
+        </div>
+        <p id="location-line" class="location-line">Search for a place to get started.</p>
+      </div>
+    </details>
+
+    <div class="forecast-heading">
+      <h2>Next 7 days</h2>
+      <div class="heading-tools">
+        <button id="refresh" class="button secondary" type="button">Refresh</button>
+        <span id="updated" class="updated"></span>
+      </div>
+    </div>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <section id="days" class="days" aria-live="polite"></section>
+    <p class="credit">
+      Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>.
+      Forecasts are estimates; local temperatures can differ from model data.
+      Your selected location and cached forecast are stored in this browser.
+    </p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const LOCATION_KEY = "whenfreeze.location.v1";
+      const FORECAST_KEY = "whenfreeze.forecast.v1";
+      const searchInput = document.querySelector("#location-search");
+      const resultsElement = document.querySelector("#search-results");
+      const locationLine = document.querySelector("#location-line");
+      const messageElement = document.querySelector("#message");
+      const daysElement = document.querySelector("#days");
+      const updatedElement = document.querySelector("#updated");
+      const refreshButton = document.querySelector("#refresh");
+      const locationPanel = document.querySelector("#location-panel");
+      const locationSummaryLabel = document.querySelector("#location-summary-label");
+      const locationSummaryCurrent = document.querySelector("#location-summary-current");
+
+      let location = null;
+      let forecast = null;
+      let searchTimer = 0;
+      let searchRequest = 0;
+      let forecastRequest = 0;
+
+      function setMessage(text, isError = false) {
+        messageElement.textContent = text;
+        messageElement.classList.toggle("error", isError);
+      }
+
+      function describeLocation(place) {
+        return [place.name, place.region, place.country]
+          .filter((part, index, parts) => part && parts.indexOf(part) === index)
+          .join(", ");
+      }
+
+      function saveJson(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+          return true;
+        } catch (error) {
+          console.warn("Could not save WhenFreeze browser data:", error);
+          return false;
+        }
+      }
+
+      function readJson(key) {
+        try {
+          const value = localStorage.getItem(key);
+          return value ? JSON.parse(value) : null;
+        } catch (error) {
+          console.warn("Could not read WhenFreeze browser data:", error);
+          return null;
+        }
+      }
+
+      function validLocation(value) {
+        return value && typeof value.name === "string" &&
+          typeof value.latitude === "number" && Number.isFinite(value.latitude) &&
+          typeof value.longitude === "number" && Number.isFinite(value.longitude);
+      }
+
+      function validForecast(value) {
+        return value && Array.isArray(value.hourly) &&
+          value.hourly.every(point => point && typeof point.time === "string" &&
+            (point.temperature === null ||
+             (typeof point.temperature === "number" && Number.isFinite(point.temperature))));
+      }
+
+      async function fetchJson(url, failureMessage) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`${failureMessage} (HTTP ${response.status}).`);
+        }
+        return response.json();
+      }
+
+      function mergeHourly(points) {
+        const byTime = new Map();
+        for (const point of points) {
+          if (point.time) byTime.set(point.time, point);
+        }
+        return [...byTime.values()].sort((a, b) => a.time.localeCompare(b.time));
+      }
+
+      function minuteOfDay(timestamp) {
+        const match = timestamp.match(/T(\d{2}):(\d{2})/);
+        if (!match) return -1;
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+        return hour <= 23 && minute <= 59 ? hour * 60 + minute : -1;
+      }
+
+      function formatClock(minute) {
+        const normalized = (minute % 1440 + 1440) % 1440;
+        return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+      }
+
+      function findCrossings(hourly) {
+        const crossings = [];
+        for (let index = 1; index < hourly.length; index += 1) {
+          const beforePoint = hourly[index - 1];
+          const afterPoint = hourly[index];
+          if (beforePoint.temperature === null || afterPoint.temperature === null) continue;
+
+          const enteringFreeze = afterPoint.temperature < 0;
+          if ((beforePoint.temperature < 0) === enteringFreeze) continue;
+          const beforeMinute = minuteOfDay(beforePoint.time);
+          let afterMinute = minuteOfDay(afterPoint.time);
+          if (beforeMinute < 0 || afterMinute < 0) continue;
+          if (afterMinute < beforeMinute) afterMinute += 1440;
+
+          const fraction = beforePoint.temperature /
+            (beforePoint.temperature - afterPoint.temperature);
+          const crossingMinute = Math.round(
+            beforeMinute + fraction * (afterMinute - beforeMinute)
+          );
+          crossings.push({
+            beforeIndex: index - 1,
+            afterIndex: index,
+            fraction,
+            time: formatClock(crossingMinute),
+            enteringFreeze
+          });
+        }
+        return crossings;
+      }
+
+      function summarizeWeek(data) {
+        const grouped = new Map();
+        for (const point of data.hourly) {
+          const date = point.time.slice(0, 10);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+          if (!grouped.has(date)) grouped.set(date, []);
+          grouped.get(date).push(point);
+        }
+
+        return [...grouped.keys()].sort().slice(0, 7).map(date => {
+          const hourly = grouped.get(date);
+          const temperatures = hourly
+            .map(point => point.temperature)
+            .filter(value => typeof value === "number" && Number.isFinite(value));
+          const minimum = temperatures.length ? Math.min(...temperatures) : null;
+          const maximum = temperatures.length ? Math.max(...temperatures) : null;
+          const hasNegative = temperatures.some(value => value < 0);
+          const hasPositive = temperatures.some(value => value > 0);
+          const lastTemperature = [...hourly].reverse()
+            .find(point => typeof point.temperature === "number")?.temperature;
+          const endsBelowZero = typeof lastTemperature === "number" && lastTemperature < 0;
+          const endsAboveZero = typeof lastTemperature === "number" && lastTemperature > 0;
+          const crossings = findCrossings(hourly);
+
+          let status = "no-freeze";
+          let freezeTime = "";
+          if (hasNegative && !hasPositive) {
+            status = "all-day";
+          } else if (hasNegative && hasPositive) {
+            const lastEntry = [...crossings].reverse().find(crossing => crossing.enteringFreeze);
+            if (lastEntry) {
+              status = "crossing";
+              freezeTime = lastEntry.time;
+            }
+          }
+          return {
+            date, hourly, minimum, maximum, hasPositive,
+            endsBelowZero, endsAboveZero, crossings, status, freezeTime
+          };
+        });
+      }
+
+      function formatTemperature(value) {
+        return `${value.toFixed(1)}°C`;
+      }
+
+      function weekday(date) {
+        return new Intl.DateTimeFormat(undefined, {
+          weekday: "long", timeZone: "UTC"
+        }).format(new Date(`${date}T12:00:00Z`));
+      }
+
+      function dateLabel(date) {
+        return new Intl.DateTimeFormat(undefined, {
+          day: "numeric", month: "short", year: "numeric", timeZone: "UTC"
+        }).format(new Date(`${date}T12:00:00Z`));
+      }
+
+      function makeChart(summary, title) {
+        const width = 300;
+        const labelHeight = 17;
+        const labelGap = 5;
+        const left = 25;
+        const right = 290;
+        const top = 52;
+        const bottom = 168;
+        const values = summary.hourly
+          .map(point => point.temperature)
+          .filter(value => typeof value === "number" && Number.isFinite(value));
+        if (!values.length) {
+          const empty = document.createElement("div");
+          empty.className = "chart-empty";
+          empty.textContent = "Temperature data unavailable";
+          return empty;
+        }
+
+        let low = Math.min(...values);
+        let high = Math.max(...values);
+        if (high - low < 1) { low -= 0.5; high += 0.5; }
+        const xOf = point => {
+          const minute = minuteOfDay(point.time);
+          return minute < 0 ? left : left + minute / 1440 * (right - left);
+        };
+        const yOf = value => bottom - (value - low) / (high - low) * (bottom - top);
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "chart");
+        svg.setAttribute("role", "img");
+        svg.setAttribute("aria-label", title);
+
+        const addSvgElement = (name, attributes) => {
+          const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+          for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+          svg.append(element);
+          return element;
+        };
+        const zeroY = yOf(0);
+        if (zeroY >= top && zeroY <= bottom) {
+          addSvgElement("line", { x1: left, y1: zeroY, x2: right, y2: zeroY, stroke: "#dce4ec", "stroke-dasharray": "3 4" });
+        }
+
+        let segment = [];
+        const flushSegment = () => {
+          if (segment.length > 1) {
+            addSvgElement("polyline", {
+              points: segment.map(point => `${point.x},${point.y}`).join(" "),
+              fill: "none", stroke: summary.minimum < 0 ? "#2874bd" : "#8a9bad",
+              "stroke-width": "2.5", "stroke-linecap": "round", "stroke-linejoin": "round"
+            });
+          }
+          segment = [];
+        };
+        summary.hourly.forEach(point => {
+          if (typeof point.temperature !== "number") {
+            flushSegment();
+            return;
+          }
+          segment.push({ x: xOf(point), y: yOf(point.temperature) });
+        });
+        flushSegment();
+
+        const labels = [];
+        const addLabel = (text, anchorX, anchorY, color, side = "nearest") => {
+          labels.push({
+            text,
+            anchorX,
+            anchorY,
+            color,
+            width: Math.ceil(text.length * 5.6) + 10,
+            side
+          });
+        };
+        const seenCrossingLabels = new Set();
+        summary.crossings.forEach(crossing => {
+          const before = summary.hourly[crossing.beforeIndex];
+          const after = summary.hourly[crossing.afterIndex];
+          if (!before || !after) return;
+          const x = xOf(before) + crossing.fraction * (xOf(after) - xOf(before));
+          const color = crossing.enteringFreeze ? "#b94a3f" : "#29805a";
+          addSvgElement("circle", {
+            cx: x, cy: zeroY, r: 4,
+            fill: color,
+            stroke: "#fff", "stroke-width": "1.5"
+          });
+          const labelKey = `${crossing.time}:${crossing.enteringFreeze}`;
+          if (!seenCrossingLabels.has(labelKey)) {
+            seenCrossingLabels.add(labelKey);
+            addLabel(`0°C ${crossing.time}`, x, zeroY, color);
+          }
+        });
+
+        const minPoint = summary.hourly.find(point => point.temperature === summary.minimum);
+        const maxPoint = summary.hourly.find(point => point.temperature === summary.maximum);
+        if (minPoint) {
+          const x = xOf(minPoint);
+          const y = yOf(summary.minimum);
+          addSvgElement("circle", { cx: x, cy: y, r: 3, fill: "#516a82" });
+          addLabel(`Min ${formatTemperature(summary.minimum)}`, x, y, "#516a82", "bottom");
+        }
+        if (maxPoint) {
+          const x = xOf(maxPoint);
+          const y = yOf(summary.maximum);
+          addSvgElement("circle", { cx: x, cy: y, r: 3, fill: "#516a82" });
+          addLabel(`Max ${formatTemperature(summary.maximum)}`, x, y, "#516a82", "top");
+        }
+
+        const topRows = [];
+        const bottomRows = [];
+        const makeRow = y => ({ y, labels: [] });
+        [12, 31, 50].forEach(y => topRows.push(makeRow(y)));
+        [188, 207, 226].forEach(y => bottomRows.push(makeRow(y)));
+        labels.sort((a, b) => a.anchorX - b.anchorX);
+
+        for (const label of labels) {
+          const clampX = x => Math.max(
+            left + label.width / 2,
+            Math.min(right - label.width / 2, x)
+          );
+          const candidateRows = label.side === "top"
+            ? [...topRows, ...bottomRows]
+            : label.side === "bottom"
+              ? [...bottomRows, ...topRows]
+              : [...topRows, ...bottomRows].sort(
+                  (a, b) => Math.abs(a.y - label.anchorY) - Math.abs(b.y - label.anchorY)
+                );
+          let selectedRow = null;
+          let centerX = clampX(label.anchorX);
+
+          for (const row of candidateRows) {
+            const positions = [
+              clampX(label.anchorX),
+              ...row.labels.flatMap(item => [
+                clampX(item.centerX - item.width / 2 - label.width / 2 - labelGap),
+                clampX(item.centerX + item.width / 2 + label.width / 2 + labelGap)
+              ])
+            ];
+            centerX = positions.find(position => row.labels.every(item =>
+              Math.abs(position - item.centerX) >=
+                (label.width + item.width) / 2 + labelGap
+            ));
+            if (centerX !== undefined) {
+              selectedRow = row;
+              break;
+            }
+          }
+
+          if (!selectedRow) {
+            const rows = label.side === "bottom" ||
+              (label.side === "nearest" && label.anchorY > (top + bottom) / 2)
+              ? bottomRows
+              : topRows;
+            const lastY = rows[rows.length - 1].y;
+            selectedRow = makeRow(lastY + labelHeight + labelGap);
+            rows.push(selectedRow);
+            centerX = clampX(label.anchorX);
+          }
+
+          selectedRow.labels.push({ centerX, width: label.width });
+          label.centerX = centerX;
+          label.centerY = selectedRow.y;
+        }
+
+        const chartHeight = Math.max(
+          bottom + 24,
+          ...topRows.map(row => row.y + labelHeight / 2 + 2),
+          ...bottomRows.map(row => row.y + labelHeight / 2 + 2)
+        );
+        svg.setAttribute("viewBox", `0 0 ${width} ${chartHeight}`);
+        for (const label of labels) {
+          addSvgElement("line", {
+            x1: label.anchorX,
+            y1: label.anchorY,
+            x2: label.centerX,
+            y2: label.centerY,
+            stroke: label.color,
+            "stroke-opacity": ".4",
+            "stroke-width": "1"
+          });
+          addSvgElement("rect", {
+            x: label.centerX - label.width / 2,
+            y: label.centerY - labelHeight / 2,
+            width: label.width,
+            height: labelHeight,
+            rx: 5,
+            fill: "#fff",
+            "fill-opacity": ".96",
+            stroke: label.color,
+            "stroke-opacity": ".45"
+          });
+          const text = addSvgElement("text", {
+            x: label.centerX,
+            y: label.centerY + 3.2,
+            "text-anchor": "middle",
+            "font-size": "9",
+            "font-weight": "700",
+            fill: label.color
+          });
+          text.textContent = label.text;
+        }
+        addSvgElement("line", { x1: left, y1: bottom, x2: right, y2: bottom, stroke: "#e7edf3" });
+
+        const caption = document.createElement("div");
+        caption.className = "chart-caption";
+        caption.innerHTML = "<span>00:00</span><span>12:00</span><span>24:00</span>";
+        const wrapper = document.createElement("div");
+        wrapper.append(svg, caption);
+        return wrapper;
+      }
+
+      function renderForecast() {
+        daysElement.replaceChildren();
+        if (!forecast) return;
+        const summaries = summarizeWeek(forecast);
+        summaries.forEach((summary, dayIndex) => {
+          const card = document.createElement("article");
+          card.className = "panel day-card";
+          if (dayIndex === 0) card.classList.add("today");
+          const isFreezing = summary.minimum !== null && summary.minimum < 0 && !summary.endsAboveZero;
+          if (isFreezing) card.classList.add("freezing");
+          if (summary.status === "all-day") card.classList.add("all-day");
+
+          let status = "No freeze";
+          let badgeClass = "safe";
+          if (summary.status === "all-day") {
+            status = "Below 0°C all day";
+            badgeClass = "freezing";
+          } else if (summary.status === "crossing") {
+            status = summary.endsAboveZero ? "Ends above 0°C" : `Freezing from ${summary.freezeTime}`;
+            badgeClass = summary.endsAboveZero ? "safe" : "freezing";
+          } else if (summary.minimum !== null && summary.minimum < 0 && summary.endsAboveZero) {
+            status = "Ends above 0°C";
+          } else if (isFreezing) {
+            badgeClass = "freezing";
+          }
+
+          const top = document.createElement("div");
+          top.className = "day-top";
+          const heading = document.createElement("div");
+          const dayName = document.createElement("div");
+          dayName.className = "day-name";
+          dayName.textContent = dayIndex === 0
+            ? `Today · ${weekday(summary.date)}`
+            : weekday(summary.date);
+          const date = document.createElement("div");
+          date.className = "day-date";
+          date.textContent = dateLabel(summary.date);
+          heading.append(dayName, date);
+          const badge = document.createElement("span");
+          badge.className = `badge ${badgeClass}`;
+          badge.textContent = status;
+          top.append(heading, badge);
+          card.append(top);
+
+          const temperatures = document.createElement("div");
+          temperatures.className = "temperatures";
+          const min = document.createElement("span");
+          min.innerHTML = `Low&nbsp; <strong>${summary.minimum === null ? "—" : formatTemperature(summary.minimum)}</strong>`;
+          const max = document.createElement("span");
+          max.innerHTML = `High&nbsp; <strong>${summary.maximum === null ? "—" : formatTemperature(summary.maximum)}</strong>`;
+          temperatures.append(min, max);
+          card.append(temperatures, makeChart(summary, `${weekday(summary.date)} temperature forecast`));
+          daysElement.append(card);
+        });
+        if (!summaries.length) {
+          const empty = document.createElement("p");
+          empty.className = "message";
+          empty.textContent = "No forecast days are available.";
+          daysElement.append(empty);
+        }
+      }
+
+      function renderLocation() {
+        locationLine.textContent = location
+          ? `Forecast for ${describeLocation(location)}`
+          : "Search for a place to get started.";
+        locationSummaryLabel.textContent = location ? "Location" : "Choose a location";
+        locationSummaryCurrent.textContent = location ? describeLocation(location) : "";
+      }
+
+      function showCachedTimestamp(timestamp) {
+        if (!timestamp) {
+          updatedElement.textContent = "";
+          return;
+        }
+        const date = new Date(timestamp);
+        updatedElement.textContent = Number.isNaN(date.getTime())
+          ? ""
+          : `Updated ${new Intl.DateTimeFormat(undefined, {
+              dateStyle: "medium", timeStyle: "short"
+            }).format(date)}`;
+      }
+
+      function showResults(results, status = "") {
+        resultsElement.replaceChildren();
+        if (!results.length) {
+          if (status) {
+            const empty = document.createElement("div");
+            empty.className = "result";
+            empty.textContent = status;
+            resultsElement.append(empty);
+            resultsElement.classList.add("open");
+          } else {
+            resultsElement.classList.remove("open");
+          }
+          return;
+        }
+        for (const place of results) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "result";
+          button.setAttribute("role", "option");
+          button.textContent = place.name;
+          const detail = document.createElement("small");
+          detail.textContent = [place.region, place.country].filter(Boolean).join(", ");
+          button.append(detail);
+          button.addEventListener("click", () => selectLocation(place));
+          resultsElement.append(button);
+        }
+        resultsElement.classList.add("open");
+      }
+
+      async function fetchForecast(place) {
+        const endpoint = "https://api.open-meteo.com/v1/forecast";
+        const commonParameters = {
+          latitude: String(place.latitude),
+          longitude: String(place.longitude),
+          hourly: "temperature_2m",
+          forecast_days: "7",
+          temperature_unit: "celsius",
+          timezone: "auto"
+        };
+        const url = new URL(endpoint);
+        url.search = new URLSearchParams({
+          ...commonParameters,
+          minutely_15: "temperature_2m",
+          forecast_minutely_15: "96"
+        }).toString();
+
+        let response = await fetch(url);
+        if (!response.ok && response.status === 400) {
+          const fallbackUrl = new URL(endpoint);
+          fallbackUrl.search = new URLSearchParams(commonParameters).toString();
+          response = await fetch(fallbackUrl);
+        }
+        if (!response.ok) {
+          throw new Error(`Weather request failed (HTTP ${response.status}).`);
+        }
+
+        const data = await response.json();
+        const points = [];
+        const addSeries = (times, temperatures) => {
+          if (!Array.isArray(times) || !Array.isArray(temperatures)) return;
+          const count = Math.min(times.length, temperatures.length);
+          for (let index = 0; index < count; index += 1) {
+            points.push({ time: times[index], temperature: temperatures[index] });
+          }
+        };
+        addSeries(data.hourly?.time, data.hourly?.temperature_2m);
+        addSeries(data.minutely_15?.time, data.minutely_15?.temperature_2m);
+        if (!points.length) {
+          throw new Error("The weather service returned an incomplete forecast.");
+        }
+        return {
+          timezone: typeof data.timezone === "string" ? data.timezone : "",
+          hourly: mergeHourly(points)
+        };
+      }
+
+      async function searchLocations(query) {
+        const request = ++searchRequest;
+        if (query.trim().length < 2) {
+          resultsElement.classList.remove("open");
+          return;
+        }
+        showResults([], "Searching…");
+        try {
+          const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+          url.search = new URLSearchParams({
+            name: query.trim(), count: "8", language: "en", format: "json"
+          }).toString();
+          const data = await fetchJson(url, "Location search failed");
+          if (request !== searchRequest) return;
+          const places = (Array.isArray(data.results) ? data.results : [])
+            .filter(place => typeof place.name === "string" &&
+              Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
+            .map(place => ({
+              name: place.name,
+              region: typeof place.admin1 === "string" ? place.admin1 : "",
+              country: typeof place.country === "string" ? place.country : "",
+              latitude: place.latitude,
+              longitude: place.longitude
+            }));
+          showResults(places, places.length ? "" : "No matching locations found");
+        } catch (error) {
+          if (request === searchRequest) showResults([], error.message || "Location search failed.");
+        }
+      }
+
+      async function selectLocation(place) {
+        const samePlace = location &&
+          location.latitude === place.latitude &&
+          location.longitude === place.longitude;
+        location = place;
+        if (!samePlace) {
+          forecast = null;
+          updatedElement.textContent = "";
+          renderForecast();
+        }
+        renderLocation();
+        locationPanel.open = false;
+        resultsElement.classList.remove("open");
+        searchInput.value = describeLocation(place);
+        saveJson(LOCATION_KEY, location);
+        setMessage("");
+        await loadForecast();
+      }
+
+      async function loadForecast() {
+        if (!location) {
+          setMessage("Search for a location before refreshing the forecast.");
+          return;
+        }
+        const request = ++forecastRequest;
+        refreshButton.disabled = true;
+        setMessage("Loading forecast…");
+        try {
+          const nextForecast = await fetchForecast(location);
+          if (request !== forecastRequest) return;
+          forecast = nextForecast;
+          const updatedAt = new Date().toISOString();
+          const stored = saveJson(FORECAST_KEY, {
+            location: {
+              latitude: location.latitude,
+              longitude: location.longitude
+            },
+            updatedAt,
+            forecast
+          });
+          renderForecast();
+          showCachedTimestamp(updatedAt);
+          setMessage(stored ? "Forecast updated." : "Forecast updated, but this browser could not save the cache.");
+        } catch (error) {
+          if (request !== forecastRequest) return;
+          setMessage(`${error.message || "Could not load forecast."}${forecast ? " Showing the last saved forecast." : ""}`, true);
+        } finally {
+          if (request === forecastRequest) {
+            refreshButton.disabled = false;
+          }
+        }
+      }
+
+      searchInput.addEventListener("input", () => {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(() => searchLocations(searchInput.value), 350);
+      });
+      searchInput.addEventListener("keydown", event => {
+        if (event.key === "Escape") resultsElement.classList.remove("open");
+      });
+      document.addEventListener("click", event => {
+        if (!resultsElement.contains(event.target) && event.target !== searchInput) {
+          resultsElement.classList.remove("open");
+        }
+      });
+      refreshButton.addEventListener("click", loadForecast);
+
+      const savedLocation = readJson(LOCATION_KEY);
+      const saved = readJson(FORECAST_KEY);
+      if (validLocation(savedLocation)) location = savedLocation;
+      locationPanel.open = !location;
+      renderLocation();
+      if (location) searchInput.value = describeLocation(location);
+
+      if (saved && validForecast(saved.forecast) &&
+          (!location || !saved.location ||
+           (saved.location.latitude === location.latitude &&
+            saved.location.longitude === location.longitude))) {
+        forecast = saved.forecast;
+        renderForecast();
+        showCachedTimestamp(saved.updatedAt);
+        setMessage("Showing the saved forecast while checking for an update.");
+      }
+      if (location) loadForecast();
+    })();
+  </script>
+</body>
+</html>
